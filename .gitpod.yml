@@ -1,0 +1,34 @@
+# use custom docker image with all dependencies pre-installed
+image:
+  file: .gitpod/Dockerfile
+
+tasks:
+# run the backend
+- name: backend
+  command: cargo run --release
+  # this enables "prebuilds": this command is run on every push to the repo (requires GitHub app: https://github.com/apps/gitpod-io).
+  # the result is re-used for every workspace started on that commit
+  init: |
+    sqlite3 -init database/migrations/*.sql dim_dev.db .quit
+    gp sync-await ui
+    cargo build --release
+# run 'cargo check' on every change
+- name: dev
+  command: cargo watch -x check
+  openMode: split-right
+# run the webapp
+- name: UI
+  command: |
+    yarn --cwd ui/
+    yarn --cwd ui/ build
+    gp sync-done ui
+
+ports:
+# auto-open the webapp
+- port: 8000
+  onOpen: open-preview
+  visibility: private
+
+vscode:
+  extensions:
+    - matklad.rust-analyzer
